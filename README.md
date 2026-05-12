@@ -1,115 +1,84 @@
 # go-danfse-v2
 
-Gerador de DANFSe (Documento Auxiliar da Nota Fiscal de Serviço Eletrônica) em Go, compatível com o leiaute da **NT 008/2026** (publicada em 05/05/2026) do SPED NFS-e Nacional.
+[![Go Reference](https://pkg.go.dev/badge/github.com/wevertonj/go-danfse-v2.svg)](https://pkg.go.dev/github.com/wevertonj/go-danfse-v2)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-> **Aviso:** Esta biblioteca foi implementada com auxílio de IA generativa e ainda não passou por validação formal junto às prefeituras ou à Receita Federal. Use-a com cautela em ambiente de produção e valide o PDF gerado contra os requisitos do seu município.
+Gerador em Go para o Documento Auxiliar da Nota Fiscal de Serviço Eletrônica (DANFSe) no **Padrão Nacional (v2.0)**. 
 
-## Instalação
+Implementação baseada nas diretrizes de layout da **Nota Técnica Nº 008 – Versão 1.0 (Maio de 2026)**.
+
+## ⚠️ Status do Projeto
+
+* Como o layout é recente, o mapeamento de coordenadas foi validado contra os PDFs de exemplo oficiais da Receita Federal. **Ainda não foi comparado contra documentos reais gerados em produção.**
+* A extração das coordenadas base foi realizada com auxílio de IA e revisada manualmente. A renderização utiliza desenho absoluto.
+
+## 💡 Motivação
+
+O serviço público deixará de fornecer o PDF da NFS-e via API a partir de **1º de julho de 2026**. O desenho e geração do DANFSe passam a ser de responsabilidade do emissor.
+
+Este pacote efetua a montagem visual da nota sem depender de motores baseados em HTML, gerando o arquivo com coordenadas usando `gopdf`.
+
+## ✨ Características
+
+* **Sem CGO/Binários externos:** Geração via `gopdf`, dispensando instalação de `wkhtmltopdf` ou ferramentas baseadas no Chrome/Puppeteer.
+* **Containers menores:** Adequado para imagens Docker baseadas em *scratch* ou ambientes serverless.
+* **Layout aderente à norma:** Mantém fontes, margens, espessuras e posicionamento exigidos pela legislação.
+* **Stateless:** A entrada (XML) e a saída (PDF) são manipuladas em `[]byte`.
+
+## 📦 Instalação
 
 ```bash
 go get github.com/wevertonj/go-danfse-v2
 ```
 
-**Requisitos:**
-- Go 1.26+
-- Fontes TrueType para renderização (inclua `LiberationSans-Regular.ttf` e `LiberationSans-Bold.ttf` ou equivalentes)
+## 🚀 Como Usar
 
-## Exemplo mínimo
+Exemplo de uso básico:
 
 ```go
 package main
 
 import (
-    "log"
-    "os"
+	"log"
+	"os"
 
-    danfse "github.com/wevertonj/go-danfse-v2"
+	"github.com/wevertonj/go-danfse-v2"
 )
 
 func main() {
-    xmlData, err := os.ReadFile("nfse.xml")
-    if err != nil {
-        log.Fatal(err)
-    }
+	renderer := danfse.NewDanfseRenderer()
 
-    renderer := danfse.NewDanfseRenderer(
-        "fonts/LiberationSans-Regular.ttf",
-        "fonts/LiberationSans-Bold.ttf",
-        "assets/logo-nfse.png",
-    )
+	xmlData, err := os.ReadFile("nota_fiscal.xml")
+	if err != nil {
+		log.Fatalf("Falha ao ler XML: %v", err)
+	}
 
-    pdfBytes, err := renderer.Render(xmlData)
-    if err != nil {
-        log.Fatal(err)
-    }
+	pdfBytes, err := renderer.Render(xmlData)
+	if err != nil {
+		log.Fatalf("Erro ao gerar DANFSe: %v", err)
+	}
 
-    os.WriteFile("danfse.pdf", pdfBytes, 0644)
+	os.WriteFile("danfse.pdf", pdfBytes, 0644)
 }
 ```
 
-O arquivo `examples/basic/main.go` contém um exemplo completo com XML de mock.
+## 🔌 Integração
 
-## Arquitetura
+A biblioteca não interage com o sistema de arquivos após sua distribuição, pois as fontes de texto (Liberation Sans) e a logo obrigatória oficial são embutidos no binário (`//go:embed`).
 
-A biblioteca é composta por dois componentes principais:
+1. Instancie o `DanfseRenderer` na inicialização do serviço.
+2. Forneça o `[]byte` do XML autorizado recebido em sua aplicação para o método `Render()`.
+3. O payload `[]byte` do PDF gerado pode ser trafegado diretamente para APIs de email, storages de nuvem (S3) ou repassado ao cliente HTTP, dispensando alocação em disco.
 
-### Parser (`parser.go`)
+## 🛠️ Testes
 
-Responsável por desserializar o XML da NFS-e (namespace `http://www.sped.fazenda.gov.br/nfse`) em structs Go tipadas. Suporta o leiaute completo do padrão SPED NFS-e v1.01, incluindo:
-
-- Dados do emitente (`emit`)
-- Dados do tomador (`toma`)
-- Informações do serviço (`serv`) e valores (`valores`)
-- Código IBGE do município (`cLocIncid`) para resolução do nome da cidade
-
-### Renderer (`danfse_renderer.go`)
-
-Responsável por gerar o PDF do DANFSe a partir dos dados parseados. Usa [`signintech/gopdf`](https://github.com/signintech/gopdf) para renderização e [`skip2/go-qrcode`](https://github.com/skip2/go-qrcode) para o QR Code de autenticação. O leiaute segue as diretrizes visuais da NT 008/2026 — veja `docs/layout-guidelines.md` para detalhes.
-
-A interface pública é:
-
-```go
-type DanfseRenderer interface {
-    Render(xmlData []byte) ([]byte, error)
-}
-
-func NewDanfseRenderer(fontReg, fontBold, logo string) DanfseRenderer
-```
-
-### Utilitário IBGE (`ibge.go` + `cmd/update_ibge`)
-
-O mapa de códigos IBGE para nomes de municípios é embutido em `ibge.go` como um `map[string]string`. Para atualizar a tabela a partir da API oficial do IBGE:
+Usando os mocks embarcados no projeto:
 
 ```bash
-go run ./cmd/update_ibge/main.go
+go test ./...
+go run examples/basic/main.go
 ```
 
-O arquivo `ibge.go` na raiz da lib será sobrescrito com os dados atualizados.
+## 📄 Licença
 
-## Estrutura do repositório
-
-```
-go-danfse-v2/
-├── parser.go             # Structs e desserialização do XML NFS-e
-├── danfse_renderer.go    # Geração do PDF (DANFSe)
-├── ibge.go               # Tabela de municípios IBGE
-├── assets/               # Logo oficial NFS-e
-├── fonts/                # Fontes TrueType (LiberationSans)
-├── testdata/             # XML de exemplo para testes
-├── examples/
-│   └── basic/main.go     # Exemplo de uso completo
-├── cmd/
-│   └── update_ibge/      # Utilitário para atualizar tabela IBGE
-└── docs/
-    └── layout-guidelines.md  # Diretrizes visuais do DANFSe
-```
-
-## Conformidade
-
-- Namespace XML: `http://www.sped.fazenda.gov.br/nfse`
-- Versão do leiaute: NFS-e v1.01 (XSD oficial da Sefin Nacional)
-- Referência normativa: NT 008/2026 (publicada em 05/05/2026)
-
-## Licença
-
-BSD 3-Clause — veja [LICENSE](LICENSE).
+Este projeto é distribuído sob a licença BSD 3-Clause. Veja o arquivo `LICENSE` para mais detalhes.
