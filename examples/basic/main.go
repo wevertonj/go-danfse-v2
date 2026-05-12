@@ -17,7 +17,7 @@ func main() {
 
 	fmt.Println("Initializing DANFSe Renderer...")
 	renderer := danfse.NewDanfseRenderer("fonts/LiberationSans-Regular.ttf", "fonts/LiberationSans-Bold.ttf", "assets/logo-nfse.png")
-	
+
 	fmt.Println("Rendering PDF...")
 	pdfBytes, err := renderer.Render(xmlData)
 	if err != nil {
