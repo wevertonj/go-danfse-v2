@@ -49,11 +49,8 @@ NFSe
 Recebe o XML bruto (`[]byte`), invoca o parser internamente e produz o PDF do DANFSe.
 
 - Interface pública: `DanfseRenderer` com método `Render(xmlData []byte) ([]byte, error)`
-- Construtor: `NewDanfseRenderer(fontReg, fontBold, logo string) DanfseRenderer`
-- Dependência de arquivos externos (resolvidos em tempo de execução):
-  - `fontReg` — caminho para `LiberationSans-Regular.ttf` (ou equivalente)
-  - `fontBold` — caminho para `LiberationSans-Bold.ttf` (ou equivalente)
-  - `logo` — caminho para a imagem PNG do logo NFS-e
+- Construtor: `NewDanfseRenderer() DanfseRenderer`
+- Fontes TrueType e logo PNG são embutidos no binário via `//go:embed` (arquivos `fonts/` e `assets/` do módulo). Nenhum arquivo externo é necessário em tempo de execução.
 - Usa `signintech/gopdf` para composição do PDF e `skip2/go-qrcode` para o QR Code
 - O leiaute visual segue `docs/layout-guidelines.md`
 

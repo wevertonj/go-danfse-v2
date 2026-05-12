@@ -2,9 +2,9 @@ package danfse
 
 import (
 	"bytes"
+	_ "embed"
 	"fmt"
 	"image/png"
-	"os"
 	"strconv"
 	"strings"
 
@@ -12,21 +12,30 @@ import (
 	"github.com/skip2/go-qrcode"
 )
 
+//go:embed fonts/LiberationSans-Regular.ttf
+var embeddedFontReg []byte
+
+//go:embed fonts/LiberationSans-Bold.ttf
+var embeddedFontBold []byte
+
+//go:embed assets/logo-nfse.png
+var embeddedLogo []byte
+
 type DanfseRenderer interface {
 	Render(xmlData []byte) ([]byte, error)
 }
 
 type renderer struct {
-	fontRegPath  string
-	fontBoldPath string
-	logoPath     string
+	fontRegData  []byte
+	fontBoldData []byte
+	logoData     []byte
 }
 
-func NewDanfseRenderer(fontReg, fontBold, logo string) DanfseRenderer {
+func NewDanfseRenderer() DanfseRenderer {
 	return &renderer{
-		fontRegPath:  fontReg,
-		fontBoldPath: fontBold,
-		logoPath:     logo,
+		fontRegData:  embeddedFontReg,
+		fontBoldData: embeddedFontBold,
+		logoData:     embeddedLogo,
 	}
 }
 
@@ -230,11 +239,11 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Start(gopdf.Config{PageSize: *gopdf.PageSizeA4})
 	pdf.AddPage()
 
-	err = pdf.AddTTFFont("LiberationSans", r.fontRegPath)
+	err = pdf.AddTTFFontByReader("LiberationSans", bytes.NewReader(r.fontRegData))
 	if err != nil {
 		return nil, fmt.Errorf("pdf: erro fonte regular: %w", err)
 	}
-	err = pdf.AddTTFFont("LiberationSans-Bold", r.fontBoldPath)
+	err = pdf.AddTTFFontByReader("LiberationSans-Bold", bytes.NewReader(r.fontBoldData))
 	if err != nil {
 		return nil, fmt.Errorf("pdf: erro fonte bold: %w", err)
 	}
@@ -253,20 +262,20 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.SetFillColor(0, 0, 0)
 
 	// Logo (aspect ratio fix)
-	logoFile, err := os.Open(r.logoPath)
 	var logoW, logoH float64 = cmToPt(4.00), cmToPt(1.16)
-	if err == nil {
-		if img, err := png.DecodeConfig(logoFile); err == nil {
-			ratio := float64(img.Height) / float64(img.Width)
-			logoH = logoW * ratio
-		}
-		logoFile.Close()
+	if img, decErr := png.DecodeConfig(bytes.NewReader(r.logoData)); decErr == nil {
+		ratio := float64(img.Height) / float64(img.Width)
+		logoH = logoW * ratio
 	}
 	logoY := cmToPt(0.30)
 	if logoH < cmToPt(1.16) {
 		logoY += (cmToPt(1.16) - logoH) / 2
 	}
-	err = pdf.Image(r.logoPath, cmToPt(0.49), logoY, &gopdf.Rect{W: logoW, H: logoH})
+	logoHolder, err := gopdf.ImageHolderByBytes(r.logoData)
+	if err != nil {
+		return nil, err
+	}
+	err = pdf.ImageByHolder(logoHolder, cmToPt(0.49), logoY, &gopdf.Rect{W: logoW, H: logoH})
 	if err != nil {
 		return nil, err
 	}

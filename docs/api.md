@@ -44,29 +44,15 @@ os.WriteFile("danfse.pdf", pdfBytes, 0644)
 ## Construtor `NewDanfseRenderer`
 
 ```go
-func NewDanfseRenderer(fontReg, fontBold, logo string) DanfseRenderer
+func NewDanfseRenderer() DanfseRenderer
 ```
 
-Instancia um `DanfseRenderer` configurado com os caminhos dos recursos externos.
-
-**Parâmetros:**
-
-| Nome | Tipo | Descrição |
-|---|---|---|
-| `fontReg` | `string` | Caminho para o arquivo TrueType da fonte regular (ex.: `fonts/LiberationSans-Regular.ttf`) |
-| `fontBold` | `string` | Caminho para o arquivo TrueType da fonte negrito (ex.: `fonts/LiberationSans-Bold.ttf`) |
-| `logo` | `string` | Caminho para a imagem PNG do logo NFS-e (ex.: `assets/logo-nfse.png`) |
-
-Os caminhos são relativos ao diretório de trabalho do processo chamador (ou absolutos).
+Instancia um `DanfseRenderer` com as fontes TrueType e o logo NFS-e embutidos no binário via `//go:embed`. Nenhum arquivo externo é necessário.
 
 **Exemplo mínimo:**
 
 ```go
-renderer := danfse.NewDanfseRenderer(
-    "fonts/LiberationSans-Regular.ttf",
-    "fonts/LiberationSans-Bold.ttf",
-    "assets/logo-nfse.png",
-)
+renderer := danfse.NewDanfseRenderer()
 ```
 
 ---

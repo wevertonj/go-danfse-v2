@@ -31,10 +31,10 @@ git commit -m "chore: atualizar tabela IBGE"
 
 ## 2. Trocar ou atualizar fontes TrueType
 
-As fontes são carregadas em tempo de execução pelo caminho passado a `NewDanfseRenderer`. Para substituir:
+As fontes são embutidas no binário via `//go:embed` a partir dos arquivos `fonts/LiberationSans-Regular.ttf` e `fonts/LiberationSans-Bold.ttf`. Para substituí-las:
 
-1. Coloque os novos arquivos `.ttf` em `fonts/`
-2. Atualize os caminhos nos chamadores de `NewDanfseRenderer`
+1. Substitua os arquivos `.ttf` em `fonts/`
+2. Recompile a biblioteca
 3. Execute os testes para confirmar que o PDF continua sendo gerado corretamente:
 
 ```bash
