@@ -880,7 +880,13 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.SetX(cmToPt(10.51))
 	pdf.Cell(nil, nbs)
 
-	loc := serv.LocPrest.XMun
+	// O local da prestação na NFS-e autorizada vem do nível infNFSe
+	// (<xLocPrestacao>, preenchido pela SEFIN); o <serv><locPrest> da DPS
+	// normalmente só traz <cLocPrestacao>.
+	loc := nfse.InfNFSe.XLocPrestacao
+	if loc == "" {
+		loc = serv.LocPrest.XMun
+	}
 	if loc == "" {
 		loc = ibgeCities[serv.LocPrest.CMun]
 	}
@@ -907,6 +913,11 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	descTrib := serv.CServ.XTribMun
 	if descTrib == "" {
 		descTrib = serv.CServ.XTribNac
+	}
+	if descTrib == "" {
+		// Na NFS-e autorizada, a descrição do código de tributação nacional é
+		// preenchida pela SEFIN no nível infNFSe (<xTribNac>), não no <serv>.
+		descTrib = nfse.InfNFSe.XTribNac
 	}
 	if descTrib == "" {
 		descTrib = "-"
