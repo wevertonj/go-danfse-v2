@@ -314,8 +314,10 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.SetX(cmToPt(5.41))
 	pdf.CellWithOption(&gopdf.Rect{W: cmToPt(10.19), H: cmToPt(0.35)}, "Documento Auxiliar da NFS-e", gopdf.CellOption{Align: gopdf.Center | gopdf.Top})
 
-	// Homologação
-	if nfse.InfNFSe.AmbGer == "2" {
+	// Homologação: o aviso "SEM VALIDADE JURÍDICA" depende do TIPO DE AMBIENTE
+	// (tpAmb: 1=produção, 2=homologação), NÃO do AmbGer (1=Prefeitura, 2=SEFIN
+	// Nacional, que é 2 também em produção).
+	if nfse.InfNFSe.DPS.InfDPS.TpAmb == "2" {
 		pdf.SetTextColor(255, 0, 0)
 		pdf.SetY(cmToPt(0.95))
 		pdf.SetX(cmToPt(5.41))
