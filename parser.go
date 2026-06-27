@@ -13,8 +13,10 @@ type NFSe struct {
 type InfNFSeNode struct {
 	ID            string   `xml:"Id,attr"`
 	XLocEmi       string   `xml:"http://www.sped.fazenda.gov.br/nfse xLocEmi"`
+	XLocPrestacao string   `xml:"http://www.sped.fazenda.gov.br/nfse xLocPrestacao"`
 	NNFSe         string   `xml:"http://www.sped.fazenda.gov.br/nfse nNFSe"`
 	CLocIncid     string   `xml:"http://www.sped.fazenda.gov.br/nfse cLocIncid"`
+	XLocIncid     string   `xml:"http://www.sped.fazenda.gov.br/nfse xLocIncid"`
 	XTribNac      string   `xml:"http://www.sped.fazenda.gov.br/nfse xTribNac"`
 	AmbGer        string   `xml:"http://www.sped.fazenda.gov.br/nfse ambGer"`
 	DhProc        string   `xml:"http://www.sped.fazenda.gov.br/nfse dhProc"`
@@ -72,10 +74,10 @@ type InfDPSNode struct {
 }
 
 type PrestNode struct {
-	CNPJ  string `xml:"http://www.sped.fazenda.gov.br/nfse CNPJ"`
-	IM    string `xml:"http://www.sped.fazenda.gov.br/nfse IM"`
-	Fone  string `xml:"http://www.sped.fazenda.gov.br/nfse fone"`
-	Email string `xml:"http://www.sped.fazenda.gov.br/nfse email"`
+	CNPJ    string `xml:"http://www.sped.fazenda.gov.br/nfse CNPJ"`
+	IM      string `xml:"http://www.sped.fazenda.gov.br/nfse IM"`
+	Fone    string `xml:"http://www.sped.fazenda.gov.br/nfse fone"`
+	Email   string `xml:"http://www.sped.fazenda.gov.br/nfse email"`
 	RegTrib struct {
 		OpSimpNac   string `xml:"http://www.sped.fazenda.gov.br/nfse opSimpNac"`
 		RegApTribSN string `xml:"http://www.sped.fazenda.gov.br/nfse regApTribSN"`
@@ -90,11 +92,11 @@ type TomaNode struct {
 	Fone  string `xml:"http://www.sped.fazenda.gov.br/nfse fone"`
 	Email string `xml:"http://www.sped.fazenda.gov.br/nfse email"`
 	End   struct {
-		EndNac EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
-		XLgr   string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
-		Nro    string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
-		XCpl   string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
-		XBairro string      `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
+		EndNac  EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
+		XLgr    string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
+		Nro     string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
+		XCpl    string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
+		XBairro string       `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
 	} `xml:"http://www.sped.fazenda.gov.br/nfse end"`
 }
 
@@ -109,11 +111,11 @@ type IntermNode struct {
 	CEP   string `xml:"http://www.sped.fazenda.gov.br/nfse CEP"`
 	UF    string `xml:"http://www.sped.fazenda.gov.br/nfse UF"`
 	End   struct {
-		EndNac EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
-		XLgr   string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
-		Nro    string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
-		XCpl   string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
-		XBairro string      `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
+		EndNac  EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
+		XLgr    string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
+		Nro     string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
+		XCpl    string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
+		XBairro string       `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
 	} `xml:"http://www.sped.fazenda.gov.br/nfse end"`
 }
 
@@ -154,36 +156,36 @@ type DestNode struct {
 	CEP   string `xml:"http://www.sped.fazenda.gov.br/nfse CEP"`
 	UF    string `xml:"http://www.sped.fazenda.gov.br/nfse UF"`
 	End   struct {
-		EndNac EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
-		XLgr   string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
-		Nro    string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
-		XCpl   string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
-		XBairro string      `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
+		EndNac  EnderNacNode `xml:"http://www.sped.fazenda.gov.br/nfse endNac"`
+		XLgr    string       `xml:"http://www.sped.fazenda.gov.br/nfse xLgr"`
+		Nro     string       `xml:"http://www.sped.fazenda.gov.br/nfse nro"`
+		XCpl    string       `xml:"http://www.sped.fazenda.gov.br/nfse xCpl"`
+		XBairro string       `xml:"http://www.sped.fazenda.gov.br/nfse xBairro"`
 	} `xml:"http://www.sped.fazenda.gov.br/nfse end"`
 }
 
 type IBSCBSNode struct {
-	Dest DestNode `xml:"http://www.sped.fazenda.gov.br/nfse dest"`
-	CIndOp           string `xml:"http://www.sped.fazenda.gov.br/nfse cIndOp"`
-	CLocalidadeIncid string `xml:"http://www.sped.fazenda.gov.br/nfse cLocalidadeIncid"`
-	XLocalidadeIncid string `xml:"http://www.sped.fazenda.gov.br/nfse xLocalidadeIncid"`
+	Dest             DestNode `xml:"http://www.sped.fazenda.gov.br/nfse dest"`
+	CIndOp           string   `xml:"http://www.sped.fazenda.gov.br/nfse cIndOp"`
+	CLocalidadeIncid string   `xml:"http://www.sped.fazenda.gov.br/nfse cLocalidadeIncid"`
+	XLocalidadeIncid string   `xml:"http://www.sped.fazenda.gov.br/nfse xLocalidadeIncid"`
 	Valores          struct {
-		VDescIncond string `xml:"http://www.sped.fazenda.gov.br/nfse vDescIncond"`
+		VDescIncond    string `xml:"http://www.sped.fazenda.gov.br/nfse vDescIncond"`
 		VCalcReeRepRes string `xml:"http://www.sped.fazenda.gov.br/nfse vCalcReeRepRes"`
-		VBC string `xml:"http://www.sped.fazenda.gov.br/nfse vBC"`
-		UF struct {
-			PRedAliqUF string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqUF"`
-			PIBSUF string `xml:"http://www.sped.fazenda.gov.br/nfse pIBSUF"`
+		VBC            string `xml:"http://www.sped.fazenda.gov.br/nfse vBC"`
+		UF             struct {
+			PRedAliqUF  string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqUF"`
+			PIBSUF      string `xml:"http://www.sped.fazenda.gov.br/nfse pIBSUF"`
 			PAliqEfetUF string `xml:"http://www.sped.fazenda.gov.br/nfse pAliqEfetUF"`
 		} `xml:"http://www.sped.fazenda.gov.br/nfse uf"`
 		Mun struct {
-			PRedAliqMun string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqMun"`
-			PIBSMun string `xml:"http://www.sped.fazenda.gov.br/nfse pIBSMun"`
+			PRedAliqMun  string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqMun"`
+			PIBSMun      string `xml:"http://www.sped.fazenda.gov.br/nfse pIBSMun"`
 			PAliqEfetMun string `xml:"http://www.sped.fazenda.gov.br/nfse pAliqEfetMun"`
 		} `xml:"http://www.sped.fazenda.gov.br/nfse mun"`
 		Fed struct {
-			PRedAliqCBS string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqCBS"`
-			PCBS string `xml:"http://www.sped.fazenda.gov.br/nfse pCBS"`
+			PRedAliqCBS  string `xml:"http://www.sped.fazenda.gov.br/nfse pRedAliqCBS"`
+			PCBS         string `xml:"http://www.sped.fazenda.gov.br/nfse pCBS"`
 			PAliqEfetCBS string `xml:"http://www.sped.fazenda.gov.br/nfse pAliqEfetCBS"`
 		} `xml:"http://www.sped.fazenda.gov.br/nfse fed"`
 		Trib struct {
@@ -223,19 +225,19 @@ type ValoresDPS struct {
 			XLocIncid   string `xml:"http://www.sped.fazenda.gov.br/nfse xLocIncid"`
 			CPaisResult string `xml:"http://www.sped.fazenda.gov.br/nfse cPaisResult"`
 			TpImunidade string `xml:"http://www.sped.fazenda.gov.br/nfse tpImunidade"`
-			ExigSusp struct {
+			ExigSusp    struct {
 				TpSusp    string `xml:"http://www.sped.fazenda.gov.br/nfse tpSusp"`
 				NProcesso string `xml:"http://www.sped.fazenda.gov.br/nfse nProcesso"`
 			} `xml:"http://www.sped.fazenda.gov.br/nfse exigSusp"`
 			TpRetISSQN string `xml:"http://www.sped.fazenda.gov.br/nfse tpRetISSQN"`
-			BM struct {
+			BM         struct {
 				VRedBCBM string `xml:"http://www.sped.fazenda.gov.br/nfse vRedBCBM"`
 			} `xml:"http://www.sped.fazenda.gov.br/nfse BM"`
 		} `xml:"http://www.sped.fazenda.gov.br/nfse tribMun"`
 		TribFed struct {
-			VRetIRRF string `xml:"http://www.sped.fazenda.gov.br/nfse vRetIRRF"`
-			VRetCP   string `xml:"http://www.sped.fazenda.gov.br/nfse vRetCP"`
-			VRetCSLL string `xml:"http://www.sped.fazenda.gov.br/nfse vRetCSLL"`
+			VRetIRRF  string `xml:"http://www.sped.fazenda.gov.br/nfse vRetIRRF"`
+			VRetCP    string `xml:"http://www.sped.fazenda.gov.br/nfse vRetCP"`
+			VRetCSLL  string `xml:"http://www.sped.fazenda.gov.br/nfse vRetCSLL"`
 			PisCofins struct {
 				VPis           string `xml:"http://www.sped.fazenda.gov.br/nfse vPis"`
 				VCofins        string `xml:"http://www.sped.fazenda.gov.br/nfse vCofins"`
