@@ -152,6 +152,26 @@ func formatCurrency(val string) string {
 	return "R$ " + withSeps + "," + decPart
 }
 
+// ufByIBGEPrefix mapeia os dois primeiros dígitos do código IBGE do município
+// para a sigla da UF. Usado para derivar a UF quando o XML não a informa
+// (ex.: <endNac> do tomador só traz cMun e CEP, sem UF).
+var ufByIBGEPrefix = map[string]string{
+	"11": "RO", "12": "AC", "13": "AM", "14": "RR", "15": "PA", "16": "AP", "17": "TO",
+	"21": "MA", "22": "PI", "23": "CE", "24": "RN", "25": "PB", "26": "PE", "27": "AL", "28": "SE", "29": "BA",
+	"31": "MG", "32": "ES", "33": "RJ", "35": "SP",
+	"41": "PR", "42": "SC", "43": "RS",
+	"50": "MS", "51": "MT", "52": "GO", "53": "DF",
+}
+
+// ufFromIBGE deriva a sigla da UF a partir do código IBGE do município (7 dígitos);
+// retorna "" quando o código é inválido ou desconhecido.
+func ufFromIBGE(cMun string) string {
+	if len(cMun) < 2 {
+		return ""
+	}
+	return ufByIBGEPrefix[cMun[:2]]
+}
+
 func formatMunUF(xMun, cMun, uf string) string {
 	mun := xMun
 	if mun == "" {
@@ -159,6 +179,10 @@ func formatMunUF(xMun, cMun, uf string) string {
 	}
 	if mun == "" {
 		mun = cMun
+	}
+	if uf == "" {
+		// O <endNac> do tomador não traz UF; deriva-se do código IBGE.
+		uf = ufFromIBGE(cMun)
 	}
 	if mun == "" {
 		if uf != "" {
@@ -894,8 +918,10 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 		loc = serv.LocPrest.CMun
 	}
 	if loc != "" {
-		if serv.LocPrest.CEP != "" {
-			loc += " / " + serv.LocPrest.CEP
+		// Coluna "Local da Prestação / Sigla UF / País": a UF é derivada do código
+		// IBGE do local de incidência do ISSQN (a NFS-e não traz a sigla direta).
+		if uf := ufFromIBGE(nfse.InfNFSe.CLocIncid); uf != "" {
+			loc += " / " + uf
 		}
 		if serv.LocPrest.CPaisPrestacao != "" {
 			loc += " / " + serv.LocPrest.CPaisPrestacao

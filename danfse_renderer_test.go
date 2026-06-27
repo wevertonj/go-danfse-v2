@@ -50,6 +50,6 @@ func TestRenderer_ServicoPrestado_DescricaoELocal(t *testing.T) {
 
 	assert.Contains(t, text, "Análise e desenvolvimento de sistemas.",
 		"a descrição do código de tributação nacional deve aparecer no DANFSe")
-	assert.Contains(t, text, "São Paulo",
-		"o local da prestação deve aparecer no DANFSe")
+	assert.Contains(t, text, "São Paulo / SP",
+		"o local da prestação deve aparecer com a UF derivada do código IBGE")
 }
