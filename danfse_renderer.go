@@ -331,9 +331,13 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.SetX(cmToPt(15.62))
 	uf := nfse.InfNFSe.Emit.EnderNac.UF
 	if uf == "" {
-		uf = "PR"
+		uf = ufFromIBGE(nfse.InfNFSe.Emit.EnderNac.CMun)
 	}
-	pdf.Cell(nil, fmt.Sprintf("Município: %s - %s", nfse.InfNFSe.XLocEmi, uf))
+	if uf == "" {
+		return nil, fmt.Errorf("pdf: UF do emitente ausente e não derivável do cMun %q", nfse.InfNFSe.Emit.EnderNac.CMun)
+	}
+	// Separador " / " conforme NT 008/2026 v1.02, tabela 2.4.5 ("Município: CCCC / CC").
+	pdf.Cell(nil, fmt.Sprintf("Município: %s / %s", nfse.InfNFSe.XLocEmi, uf))
 
 	pdf.SetFont("LiberationSans", "", 6)
 	pdf.SetY(cmToPt(0.85))
@@ -361,13 +365,25 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// QR Code (Sem borda)
 	qrUrl := "https://www.nfse.gov.br/ConsultaPublica/?tpc=1&chave=" + chaveAcessoTop
+	// Sem o QR não há como verificar a autenticidade da NFS-e: qualquer falha da
+	// cadeia aborta a geração em vez de emitir um DANFSe incompleto.
 	q, err := qrcode.New(qrUrl, qrcode.Medium)
-	if err == nil {
-		q.DisableBorder = true
-		qrBytes, _ := q.PNG(256)
-		imgH, _ := gopdf.ImageHolderByBytes(qrBytes)
-		// Y ajustado para 1.50 (encosta levemente mais no topo para dar respiro embaixo)
-		pdf.ImageByHolder(imgH, cmToPt(17.48), cmToPt(1.60), &gopdf.Rect{W: cmToPt(1.90), H: cmToPt(1.90)})
+	if err != nil {
+		return nil, fmt.Errorf("pdf: qrcode: %w", err)
+	}
+	q.DisableBorder = true
+	qrBytes, err := q.PNG(256)
+	if err != nil {
+		return nil, fmt.Errorf("pdf: qrcode: %w", err)
+	}
+	imgH, err := gopdf.ImageHolderByBytes(qrBytes)
+	if err != nil {
+		return nil, fmt.Errorf("pdf: qrcode: %w", err)
+	}
+	// Y ajustado para 1.50 (encosta levemente mais no topo para dar respiro embaixo)
+	err = pdf.ImageByHolder(imgH, cmToPt(17.48), cmToPt(1.60), &gopdf.Rect{W: cmToPt(1.90), H: cmToPt(1.90)})
+	if err != nil {
+		return nil, fmt.Errorf("pdf: qrcode: %w", err)
 	}
 
 	// A autenticidade...
