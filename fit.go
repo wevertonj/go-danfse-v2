@@ -23,6 +23,12 @@ const (
 	// item 2.4.5 ("...Administ...", "...papel..."), não com o caractere "…".
 	ellipsis = "..."
 
+	// traco preenche o campo sem informação, conforme a nota 12 do item 2.4.5
+	// da NT: "os campos sem informações no XML devem ser preenchidos com um
+	// traço (-)". Não confundir com a linha inteira sem dados, que as notas 1 e
+	// 5 permitem suprimir.
+	traco = "-"
+
 	// colGutter é a folga (cm) entre o fim do texto e a borda da coluna vizinha.
 	colGutter = 0.15
 
@@ -72,6 +78,21 @@ func linhasInfoCompl(desloc float64) int {
 		return minLinhasInfoCompl
 	}
 	return linhas
+}
+
+// ouTraco devolve o traço da nota 12 quando o campo não veio no XML. Campo em
+// branco no DANFSe impresso não se distingue de campo que o emissor deixou de
+// renderizar; o traço declara que o dado não existe. Conteúdo só de espaços
+// imprime igual a campo vazio, então conta como ausente.
+//
+// fitCell aplica isto em todo campo de conteúdo variável — os campos do
+// cabeçalho, que juntam rótulo e valor na mesma célula ("Município: CCCC / CC"),
+// chamam direto para não perder o rótulo.
+func ouTraco(v string) string {
+	if strings.TrimSpace(v) == "" {
+		return traco
+	}
+	return v
 }
 
 // truncText devolve text encurtado com reticências até caber em maxW pontos,
@@ -140,7 +161,11 @@ func limitLines(pdf *gopdf.GoPdf, text string, width float64, maxLines int) stri
 // de limitX (cm) — a borda da coluna vizinha ou da página. Substitui pdf.Cell
 // em todo campo de conteúdo variável: gopdf não quebra nem limita o texto de
 // Cell, então sem isto um valor longo invade a coluna ao lado (issue #2).
+//
+// Campo ausente sai com o traço da nota 12; o traço vem antes do truncamento
+// porque a regra é sobre o dado que faltou no XML, não sobre o que não coube
+// (nesse caso a NT manda reticências).
 func fitCell(pdf *gopdf.GoPdf, limitX float64, text string) {
 	maxW := cmToPt(limitX-colGutter) - pdf.GetX()
-	pdf.Cell(nil, truncText(pdf, text, maxW))
+	pdf.Cell(nil, truncText(pdf, ouTraco(text), maxW))
 }

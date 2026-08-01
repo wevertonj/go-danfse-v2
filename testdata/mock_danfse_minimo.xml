@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DANFSe mínimo: só o que o renderer exige para não falhar (chave de acesso,
+  município/UF do emitente e tipo de ambiente). Todos os demais campos ficam
+  ausentes de propósito — é a fixture da nota 12 do item 2.4.5 da NT 008/2026
+  v1.02: "os campos sem informações no XML devem ser preenchidos com um traço".
+-->
+<NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01">
+  <infNFSe Id="NFS355030826048BJSEBRKWX5Z541700000000000459123847291">
+    <emit>
+      <enderNac>
+        <cMun>3550308</cMun>
+        <UF>SP</UF>
+      </enderNac>
+    </emit>
+    <DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.01">
+      <infDPS Id="DPS355030826048BJSEBRKWX5Z541700000000000459123847291">
+        <tpAmb>1</tpAmb>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+</NFSe>

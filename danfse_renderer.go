@@ -337,16 +337,19 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 		return nil, fmt.Errorf("pdf: UF do emitente ausente e não derivável do cMun %q", nfse.InfNFSe.Emit.EnderNac.CMun)
 	}
 	// Separador " / " conforme NT 008/2026 v1.02, tabela 2.4.5 ("Município: CCCC / CC").
-	fitCell(&pdf, colXEnd, fmt.Sprintf("Município: %s / %s", nfse.InfNFSe.XLocEmi, uf))
+	// As três células do cabeçalho juntam rótulo e valor no mesmo texto, então o
+	// traço da nota 12 é aplicado ao valor antes de compor — passar a célula
+	// inteira ao fitCell apagaria o rótulo.
+	fitCell(&pdf, colXEnd, fmt.Sprintf("Município: %s / %s", ouTraco(nfse.InfNFSe.XLocEmi), uf))
 
 	pdf.SetFont("LiberationSans", "", 6)
 	pdf.SetY(cmToPt(0.85))
 	pdf.SetX(cmToPt(15.62))
-	pdf.Cell(nil, "Ambiente Gerador: "+nfse.InfNFSe.AmbGer)
+	fitCell(&pdf, colXEnd, "Ambiente Gerador: "+ouTraco(nfse.InfNFSe.AmbGer))
 
 	pdf.SetY(cmToPt(1.15))
 	pdf.SetX(cmToPt(15.62))
-	pdf.Cell(nil, "Tipo de Ambiente: "+nfse.InfNFSe.DPS.InfDPS.TpAmb)
+	fitCell(&pdf, colXEnd, "Tipo de Ambiente: "+ouTraco(nfse.InfNFSe.DPS.InfDPS.TpAmb))
 
 	// LINHA SEPARADORA DO HEADER
 	pdf.Line(cmToPt(0.30), cmToPt(1.47), cmToPt(20.70), cmToPt(1.47))
@@ -1564,9 +1567,11 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.SetFont("LiberationSans", "", 7)
 	pdf.SetY(dy(yInfoCompl))
 	xOutInf := nfse.InfNFSe.DPS.InfDPS.Serv.InfoCompl.XOutInf
-	// Se houver texto, plota
-	if xOutInf != "" {
-		pdf.SetX(cmToPt(0.40))
+	pdf.SetX(cmToPt(0.40))
+	if xOutInf == "" {
+		// Bloco vazio é campo sem informação como qualquer outro (nota 12).
+		fitCell(&pdf, colXEnd, xOutInf)
+	} else {
 		// O MultiCell descarta em silêncio o que não couber na altura do Rect;
 		// o corte prévio marca a supressão com reticências (NT 008/2026, item 2.1).
 		altura := cmToPt(yCanhoto-0.05) - dy(yInfoCompl)

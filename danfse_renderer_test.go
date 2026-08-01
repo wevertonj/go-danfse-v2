@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -247,6 +248,114 @@ func TestRenderer_TextosLongos(t *testing.T) {
 		assert.Contains(t, texto, "3550308 / 01.310-200", "código IBGE / CEP do prestador")
 		assert.Contains(t, texto, "(11) 99999-9999", "telefone do prestador")
 		assert.Contains(t, texto, "459123", "número da NFS-e")
+	})
+}
+
+// valorAbaixo devolve a primeira palavra da célula logo abaixo do rótulo cujo
+// primeiro termo é rotulo e cujo topo está em yRotulo (cm do grid). O DANFSe
+// alinha rótulo (6 pt) e valor (7 pt) na mesma coluna, com o valor 0,30–0,34 cm
+// abaixo; devolve "" quando não há nada escrito ali — que é justamente o campo
+// em branco proibido pela nota 12 da NT.
+func valorAbaixo(t *testing.T, palavras []palavra, rotulo string, yRotulo float64) string {
+	t.Helper()
+	var label palavra
+	for _, p := range palavras {
+		if p.texto == rotulo && p.yMin > yRotulo-0.15 && p.yMin < yRotulo+0.15 {
+			label = p
+			break
+		}
+	}
+	require.NotEmpty(t, label.texto, "rótulo %q não encontrado em y=%.2f", rotulo, yRotulo)
+
+	for _, p := range palavras {
+		mesmaColuna := p.xMin > label.xMin-0.12 && p.xMin < label.xMin+0.12
+		if mesmaColuna && p.yMin > label.yMin+0.20 && p.yMin < label.yMin+0.45 {
+			return p.texto
+		}
+	}
+	return ""
+}
+
+// linhaEm devolve a linha cujo topo está em y (cm), da esquerda para a direita,
+// como sai impressa. Usada nas células do cabeçalho, que juntam rótulo e valor
+// no mesmo texto ("Município: CCCC / CC", NT 2.4.5).
+func linhaEm(palavras []palavra, y float64) string {
+	var linha []palavra
+	for _, p := range palavras {
+		if p.yMin > y-0.08 && p.yMin < y+0.08 {
+			linha = append(linha, p)
+		}
+	}
+	sort.Slice(linha, func(i, j int) bool { return linha[i].xMin < linha[j].xMin })
+	textos := make([]string, 0, len(linha))
+	for _, p := range linha {
+		textos = append(textos, p.texto)
+	}
+	return strings.Join(textos, " ")
+}
+
+// TestRenderer_CamposSemInformacao cobre a nota 12 do item 2.4.5 da NT 008/2026
+// v1.02: "os campos sem informações no XML devem ser preenchidos com um traço
+// (-)". O repo já fazia isso em 47 campos e deixava ~15 em branco — o campo em
+// branco não se distingue de um campo que o emissor esqueceu de renderizar.
+//
+// Fora do alcance da nota 12, e por isso ausentes da tabela: o canhoto (DATA
+// CIENTIFICAÇÃO e IDENTIFICAÇÃO E ASSINATURA), em branco de propósito para
+// preenchimento à mão, e a célula EMITENTE DA NFS-e, que hoje não tem valor
+// algum ligado ao XML — campo não implementado é outro problema, não nota 12.
+func TestRenderer_CamposSemInformacao(t *testing.T) {
+	minimo, err := os.ReadFile("testdata/mock_danfse_minimo.xml")
+	require.NoError(t, err)
+	mock, err := os.ReadFile("testdata/mock_danfse.xml")
+	require.NoError(t, err)
+
+	t.Run("should fill every field absent from the XML with the NT dash", func(t *testing.T) {
+		palavras := pdfWords(t, minimo)
+
+		campos := []struct {
+			rotulo string
+			y      float64
+			campo  string
+		}{
+			{"NÚMERO", 2.35, "número da NFS-e"},
+			{"COMPETÊNCIA", 2.35, "competência da NFS-e"},
+			{"DATA", 2.35, "data e hora da emissão da NFS-e"},
+			{"NÚMERO", 3.05, "número da DPS"},
+			{"SÉRIE", 3.05, "série da DPS"},
+			{"DATA", 3.05, "data e hora da emissão da DPS"},
+			{"CNPJ", 4.41, "CNPJ do prestador"},
+			{"Indicador", 4.41, "inscrição municipal do prestador"},
+			{"Telefone", 4.41, "telefone do prestador"},
+			{"Nome", 5.05, "nome empresarial do prestador"},
+			{"Endereço", 5.69, "endereço do prestador"},
+			{"E-mail", 5.69, "e-mail do prestador"},
+			{"Descrição", 13.86, "descrição do serviço"},
+			{"INFORMAÇÕES", 22.34, "informações complementares"},
+		}
+		for _, c := range campos {
+			assert.Equal(t, "-", valorAbaixo(t, palavras, c.rotulo, c.y),
+				"%s deve sair com o traço da nota 12", c.campo)
+		}
+	})
+
+	t.Run("should fill the header cells that inline label and value", func(t *testing.T) {
+		palavras := pdfWords(t, minimo)
+
+		assert.Equal(t, "Município: - / SP", linhaEm(palavras, 0.40),
+			"o município do emitente sem xLocEmi mantém o formato da NT 2.4.5")
+		assert.Equal(t, "Ambiente Gerador: -", linhaEm(palavras, 0.81))
+
+		semTpAmb := []byte(strings.Replace(string(minimo), "<tpAmb>1</tpAmb>", "", 1))
+		assert.Equal(t, "Tipo de Ambiente: -", linhaEm(pdfWords(t, semTpAmb), 1.11))
+	})
+
+	t.Run("should keep the informed values instead of dashing them out", func(t *testing.T) {
+		palavras := pdfWords(t, mock)
+
+		assert.Equal(t, "459123", valorAbaixo(t, palavras, "NÚMERO", 2.35))
+		assert.Equal(t, "PRESTADOR", valorAbaixo(t, palavras, "Nome", 5.05))
+		assert.Equal(t, "Município: São Paulo / SP", linhaEm(palavras, 0.40))
+		assert.Equal(t, "Ambiente Gerador: 2", linhaEm(palavras, 0.81))
 	})
 }
 

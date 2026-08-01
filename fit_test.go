@@ -122,6 +122,51 @@ func TestTruncText(t *testing.T) {
 	})
 }
 
+// TestOuTraco cobre a nota 12 do item 2.4.5 da NT 008/2026 v1.02: "os campos
+// sem informações no XML devem ser preenchidos com um traço (-)". Campo em
+// branco e campo preenchido com traço são indistinguíveis para quem lê o
+// DANFSe impresso — mas o branco também é indistinguível de um campo que o
+// emissor deixou de renderizar.
+func TestOuTraco(t *testing.T) {
+	t.Run("should fill an absent value with the NT dash", func(t *testing.T) {
+		assert.Equal(t, "-", ouTraco(""))
+	})
+
+	t.Run("should keep an informed value untouched", func(t *testing.T) {
+		assert.Equal(t, "PRESTADOR DE TESTE LTDA", ouTraco("PRESTADOR DE TESTE LTDA"))
+	})
+
+	t.Run("should treat blank content as absent", func(t *testing.T) {
+		// Espaços vindos do XML imprimem exatamente como o campo vazio.
+		assert.Equal(t, "-", ouTraco("   "))
+	})
+}
+
+// TestFitCell cobre a nota 12 no ponto único por onde passam os 89 campos de
+// conteúdo variável do DANFSe: o campo sem dado sai com o traço, não em branco.
+func TestFitCell(t *testing.T) {
+	t.Run("should write the NT dash when the field has no data", func(t *testing.T) {
+		pdf := newMeasurePdf(t, 7)
+		pdf.SetX(cmToPt(0.40))
+		x := pdf.GetX()
+
+		fitCell(pdf, colX3, "")
+
+		assert.InDelta(t, measure(t, pdf, "-"), pdf.GetX()-x, 0.01,
+			"o cursor deve avançar a largura do traço")
+	})
+
+	t.Run("should write the informed text as it came from the XML", func(t *testing.T) {
+		pdf := newMeasurePdf(t, 7)
+		pdf.SetX(cmToPt(0.40))
+		x := pdf.GetX()
+
+		fitCell(pdf, colX3, "PRESTADOR DE TESTE LTDA")
+
+		assert.InDelta(t, measure(t, pdf, "PRESTADOR DE TESTE LTDA"), pdf.GetX()-x, 0.01)
+	})
+}
+
 // TestLinhasInfoCompl cobre a repartição do pool de linhas entre os dois campos
 // elásticos (issue #2, parte 2): a descrição do serviço desloca os blocos para
 // baixo e as informações complementares ficam com o espaço que resta até o

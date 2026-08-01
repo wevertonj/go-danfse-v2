@@ -96,6 +96,31 @@ Campos de bloco (`MultiCell`) usam `limitLines`: o gopdf descarta em silêncio a
 
 ---
 
+## Campos sem Informação
+
+Base normativa: NT 008/2026 v1.02, **nota 12 do item 2.4.5** — "os campos sem informações no XML devem ser preenchidos com um traço (-)". Campo em branco é indistinguível de campo que o emissor deixou de renderizar; o traço declara que o dado não existe.
+
+| Regra | Valor |
+|---|---|
+| Preenchimento | `traco` = `-` (`fit.go`) |
+| Ponto único | `ouTraco` dentro do `fitCell` — cobre os 89 campos de conteúdo variável de uma vez |
+| Conteúdo só de espaços | conta como ausente (imprime igual a campo vazio) |
+| Ordem | traço **antes** do truncamento: a nota 12 trata do dado que faltou no XML; o que não coube leva reticências (item 2.1) |
+| Células que juntam rótulo e valor | `Município: <valor> / <UF>`, `Ambiente Gerador: <valor>` e `Tipo de Ambiente: <valor>` chamam `ouTraco` no valor antes de compor — passar a célula inteira ao `fitCell` nunca dispararia a regra, porque o rótulo já a torna não vazia |
+| Bloco de informações complementares | vazio → traço em `Cell`; com texto → `MultiCell` + `limitLines` |
+
+Fora do alcance da nota 12:
+
+| Campo | Motivo |
+|---|---|
+| `DATA CIENTIFICAÇÃO` / `IDENTIFICAÇÃO E ASSINATURA` (canhoto) | em branco de propósito, para preenchimento à mão |
+| `EMITENTE DA NFS-e` | a célula não tem valor ligado ao XML em `danfse_renderer.go` — campo não implementado, não campo vazio |
+| Linha inteira sem dados | notas 1 e 5 do item 2.4.5 permitem **suprimir a linha**; é regra distinta e não implementada |
+
+Fixture da regra: `testdata/mock_danfse_minimo.xml` (só chave de acesso, município/UF do emitente e `tpAmb`).
+
+---
+
 ## Campos Elásticos
 
 Base normativa: NT 008/2026 v1.02, item 2.1 — mais de uma linha é permitido ("desde que a leitura possa ser feita de forma clara") e os tamanhos do 2.4.5 não são obrigatórios. Só dois campos têm orçamento da NT acima de 1 linha; todos os demais truncam em 1 linha via `fitCell`.
@@ -223,3 +248,5 @@ As células de título das seções principais recebem fundo cinza aplicado **an
 | Tamanhos de fonte do item 2.4 da NT são mínimos | encolher a fonte para caber texto é não conformidade | truncar, nunca reduzir |
 | `pdftotext -layout` não revela sobreposição | teste de transbordo passa falsamente | usar `-bbox` e comparar `xMax`/`yMax` |
 | Repo usa Liberation Sans; a NT pede Arial e Microsoft Sans Serif | métricas diferentes das que calibram os limites de caracteres da NT | truncar por `MeasureTextWidth` |
+| Campo novo desenhado com `pdf.Cell` em vez de `fitCell` | escapa do truncamento **e** do traço da nota 12 | todo dado do XML entra por `fitCell`; célula que junta rótulo e valor aplica `ouTraco` só no valor |
+| `SITUAÇÃO DA NFS-e` e `FINALIDADE` saem fixos em `1 - Normal` | valor não vem do XML — nenhum traço aparece ali porque nada é lido | tratar junto com a marca d'água de cancelamento/substituição (`T4.2` do plano) |
