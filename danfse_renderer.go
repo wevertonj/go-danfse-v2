@@ -976,12 +976,31 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	pdf.SetFont("LiberationSans", "", 7)
 	descServ := serv.CServ.XDescServ
-	// Uma linha só: o campo vai de Y=13,79 ao início do bloco de tributação
-	// municipal (Y=14,43) e a segunda linha caía em 14,51, por cima do bloco
-	// seguinte. O que não cabe na largura sai com as reticências da NT.
+	// Campo elástico (NT, item 2.1: mais de uma linha é permitido): cresce até
+	// maxLinhasDescServ linhas — o orçamento de 1.297 chars da tabela 2.4.5 —
+	// e o que passar disso sai com as reticências. Cada linha além da primeira
+	// desloca em um passoLinha tudo entre o bloco ISSQN (Y=14,43) e o canhoto,
+	// que é fixo (yCanhoto): o saldo volta às informações complementares.
+	descW := cmToPt(colXEnd - colGutter - 0.40)
+	linhasDesc := 1
+	if linhas, err := pdf.SplitText(descServ, descW); err == nil && len(linhas) > 1 {
+		linhasDesc = len(linhas)
+		if linhasDesc > maxLinhasDescServ {
+			linhasDesc = maxLinhasDescServ
+			descServ = limitLines(&pdf, descServ, descW, maxLinhasDescServ)
+		}
+	}
+	desloc := float64(linhasDesc-1) * passoLinha
+	// dy desloca uma coordenada Y do grid base pelo crescimento da descrição.
+	dy := func(cm float64) float64 { return cmToPt(cm + desloc) }
+
 	pdf.SetY(cmToPt(14.16))
 	pdf.SetX(cmToPt(0.40))
-	fitCell(&pdf, colXEnd, descServ)
+	if linhasDesc == 1 {
+		fitCell(&pdf, colXEnd, descServ)
+	} else {
+		pdf.MultiCell(&gopdf.Rect{W: descW, H: dy(14.43) - cmToPt(14.16)}, descServ)
+	}
 
 	// ----------------------------------------------------------------------
 	// TRIBUTAÇÃO MUNICIPAL (ISSQN)
@@ -991,21 +1010,21 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	issqnApurado := nfse.InfNFSe.Valores.VISSQN
 
 	pdf.SetFillColor(242, 242, 242)
-	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), cmToPt(14.43), cmToPt(4.90), cmToPt(0.64), "F")
+	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), dy(14.43), cmToPt(4.90), cmToPt(0.64), "F")
 	pdf.SetFillColor(0, 0, 0)
 
 	// LINHA DIVISÓRIA ABAIXO DA DESCRIÇÃO DO SERVIÇO (Início do próximo bloco em Y=14.43)
 	// Desenhada depois do fundo para sobrepor
-	pdf.Line(cmToPt(0.30), cmToPt(14.43), cmToPt(20.70), cmToPt(14.43))
+	pdf.Line(cmToPt(0.30), dy(14.43), cmToPt(20.70), dy(14.43))
 
 	// Linha 1 (Y=14.43)
 	pdf.SetFont("LiberationSans-Bold", "", 7)
-	pdf.SetY(cmToPt(14.50))
+	pdf.SetY(dy(14.50))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "TRIBUTAÇÃO MUNICIPAL (ISSQN)")
 
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(14.50))
+	pdf.SetY(dy(14.50))
 	pdf.SetX(cmToPt(5.41))
 	pdf.Cell(nil, "Tipo de Tributação do ISSQN")
 
@@ -1013,7 +1032,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Município / Sigla UF / País da Incidência do ISSQN")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(14.80))
+	pdf.SetY(dy(14.80))
 
 	tpTrib := formatTribISSQN(tribMunNode.TribISSQN)
 	pdf.SetX(cmToPt(5.41))
@@ -1031,7 +1050,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 2 (Y=15.08)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(15.15))
+	pdf.SetY(dy(15.15))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Regime Especial de Tributação do ISSQN")
 	pdf.SetX(cmToPt(5.41))
@@ -1042,7 +1061,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Número Processo Suspensão")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(15.45))
+	pdf.SetY(dy(15.45))
 	regEsp := formatRegEspTrib(nfse.InfNFSe.DPS.InfDPS.Prest.RegTrib.RegEspTrib)
 	pdf.SetX(cmToPt(0.40))
 	fitCell(&pdf, colX2, regEsp)
@@ -1067,7 +1086,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 3 (Y=15.73)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(15.80))
+	pdf.SetY(dy(15.80))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Benefício Municipal")
 	pdf.SetX(cmToPt(5.41))
@@ -1078,7 +1097,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Desconto Incondicionado")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(16.10))
+	pdf.SetY(dy(16.10))
 	bm := nfse.InfNFSe.Valores.TpBM
 	if bm == "" {
 		bm = "-"
@@ -1115,7 +1134,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 4 (Y=16.37)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(16.44))
+	pdf.SetY(dy(16.44))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "BC ISSQN")
 	pdf.SetX(cmToPt(5.41))
@@ -1126,7 +1145,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "ISSQN Apurado")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(16.74))
+	pdf.SetY(dy(16.74))
 	bcIssqn := nfse.InfNFSe.Valores.VBC
 	if bcIssqn == "" {
 		bcIssqn = "-"
@@ -1156,15 +1175,15 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	tribFed := nfse.InfNFSe.DPS.InfDPS.Valores.Trib.TribFed
 
 	pdf.SetFillColor(242, 242, 242)
-	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), cmToPt(17.02), cmToPt(4.90), cmToPt(0.64), "F")
+	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), dy(17.02), cmToPt(4.90), cmToPt(0.64), "F")
 	pdf.SetFillColor(0, 0, 0)
 
 	// LINHA DIVISÓRIA ABAIXO DO BLOCO ISSQN (Início do próximo bloco em Y=17.02)
-	pdf.Line(cmToPt(0.30), cmToPt(17.02), cmToPt(20.70), cmToPt(17.02))
+	pdf.Line(cmToPt(0.30), dy(17.02), cmToPt(20.70), dy(17.02))
 
 	// Linha 1 (Y=17.02)
 	pdf.SetFont("LiberationSans-Bold", "", 7)
-	pdf.SetY(cmToPt(17.09))
+	pdf.SetY(dy(17.09))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "TRIBUTAÇÃO FEDERAL (EXCETO CBS)")
 
@@ -1179,7 +1198,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Contribuições Sociais - Retidas")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(17.39))
+	pdf.SetY(dy(17.39))
 
 	// Mock fallback if empty
 	irrf := tribFed.VRetIRRF
@@ -1205,7 +1224,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 2 (Y=17.67)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(17.74))
+	pdf.SetY(dy(17.74))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "PIS - Débito Apuração Própria")
 
@@ -1216,7 +1235,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Descrição Contrib. Sociais - Retidas")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(18.04))
+	pdf.SetY(dy(18.04))
 
 	pis := tribFed.PisCofins.VPis
 	if pis == "" {
@@ -1242,15 +1261,15 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	ibscbs := nfse.InfNFSe.DPS.InfDPS.IBSCBS
 
 	pdf.SetFillColor(242, 242, 242)
-	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), cmToPt(18.32), cmToPt(4.90), cmToPt(0.64), "F")
+	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), dy(18.32), cmToPt(4.90), cmToPt(0.64), "F")
 	pdf.SetFillColor(0, 0, 0)
 
 	// LINHA DIVISÓRIA ABAIXO DA TRIBUTAÇÃO FEDERAL (Y=18.32)
-	pdf.Line(cmToPt(0.30), cmToPt(18.32), cmToPt(20.70), cmToPt(18.32))
+	pdf.Line(cmToPt(0.30), dy(18.32), cmToPt(20.70), dy(18.32))
 
 	// Linha 1 (Y=18.32)
 	pdf.SetFont("LiberationSans-Bold", "", 7)
-	pdf.SetY(cmToPt(18.39))
+	pdf.SetY(dy(18.39))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "TRIBUTAÇÃO IBS / CBS")
 
@@ -1262,7 +1281,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Indicador Op. / IBGE Incidência / Município Incidência / UF")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(18.69))
+	pdf.SetY(dy(18.69))
 
 	cstCclass := ibscbs.Valores.Trib.GIBSCBS.CClassTrib
 	if cstCclass == "" {
@@ -1286,7 +1305,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 2 (Y=18.96)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(19.03))
+	pdf.SetY(dy(19.03))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Exclusões e Reduções da Base de Cálculo")
 
@@ -1300,7 +1319,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Alíquota - IBS UF / IBS MUN")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(19.33))
+	pdf.SetY(dy(19.33))
 
 	excl := "-" // Somatório
 	pdf.SetX(cmToPt(0.40))
@@ -1338,7 +1357,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 3 (Y=19.61)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(19.68))
+	pdf.SetY(dy(19.68))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Alíq. Efetiva Municipal - IBS")
 
@@ -1352,7 +1371,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Valor Apurado Estadual - IBS")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(19.98))
+	pdf.SetY(dy(19.98))
 
 	aliqEfetMun := ibscbs.Valores.Mun.PAliqEfetMun
 	if aliqEfetMun == "" {
@@ -1384,7 +1403,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 
 	// Linha 4 (Y=20.26)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(20.33))
+	pdf.SetY(dy(20.33))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Valor Total Apurado - IBS")
 
@@ -1398,7 +1417,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Valor Total Apurado - CBS")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(20.63))
+	pdf.SetY(dy(20.63))
 
 	vIbsTot := ibscbs.TotCIBS.GIBS.VIBSTot
 	if vIbsTot == "" {
@@ -1432,15 +1451,15 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	// VALOR TOTAL DA NFS-E
 	// ----------------------------------------------------------------------
 	pdf.SetFillColor(242, 242, 242)
-	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), cmToPt(20.90), cmToPt(4.90), cmToPt(0.67), "F")
+	pdf.RectFromUpperLeftWithStyle(cmToPt(0.30), dy(20.90), cmToPt(4.90), cmToPt(0.67), "F")
 	pdf.SetFillColor(0, 0, 0)
 
 	// LINHA DIVISÓRIA FINAL DO BLOCO IBS/CBS (Início de Valor Total) Y=20.90
-	pdf.Line(cmToPt(0.30), cmToPt(20.90), cmToPt(20.70), cmToPt(20.90))
+	pdf.Line(cmToPt(0.30), dy(20.90), cmToPt(20.70), dy(20.90))
 
 	// Linha 1 (Y=20.90)
 	pdf.SetFont("LiberationSans-Bold", "", 7)
-	pdf.SetY(cmToPt(20.97))
+	pdf.SetY(dy(20.97))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "VALOR TOTAL DA NFS-E")
 
@@ -1455,7 +1474,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Desconto Condicionado")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(21.27))
+	pdf.SetY(dy(21.27))
 
 	vServ := nfse.InfNFSe.DPS.InfDPS.Valores.VServPrest.VServ
 	vServ = formatCurrency(vServ)
@@ -1484,7 +1503,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	// Linha 2 (Y=21.59)
 	// Neste bloco não colocamos a linha horizontal (como no modelo original, o título "TOTAL DAS RETENÇÕES" está em X=0.30 mas o fundo cinza só vai até Y=21.57 - NT prevê Y=21.59 para a linha 2, então não desenhamos divisória na linha 2)
 	pdf.SetFont("LiberationSans-Bold", "", 6)
-	pdf.SetY(cmToPt(21.66))
+	pdf.SetY(dy(21.66))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "Total das Retenções (ISSQN / Federais)")
 
@@ -1498,7 +1517,7 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	pdf.Cell(nil, "Valor Líquido da NFS-e + IBS/CBS")
 
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(21.96))
+	pdf.SetY(dy(21.96))
 
 	vTotalRet := nfse.InfNFSe.Valores.VTotalRet
 	vTotalRet = formatCurrency(vTotalRet)
@@ -1530,32 +1549,36 @@ func (r *renderer) Render(xmlData []byte) ([]byte, error) {
 	fitCell(&pdf, colXEnd, vTotNF)
 
 	// LINHA DIVISÓRIA FINAL DO BLOCO (Y=22.27)
-	pdf.Line(cmToPt(0.30), cmToPt(22.27), cmToPt(20.70), cmToPt(22.27))
+	pdf.Line(cmToPt(0.30), dy(22.27), cmToPt(20.70), dy(22.27))
 
 	// ----------------------------------------------------------------------
 	// INFORMAÇÕES COMPLEMENTARES
 	// ----------------------------------------------------------------------
 	pdf.SetFont("LiberationSans-Bold", "", 7)
-	pdf.SetY(cmToPt(22.34))
+	pdf.SetY(dy(22.34))
 	pdf.SetX(cmToPt(0.40))
 	pdf.Cell(nil, "INFORMAÇÕES COMPLEMENTARES")
 
-	// Conteúdo Y=22.68
+	// Conteúdo Y=22.68 no grid base; o bloco desce com a descrição do serviço e
+	// fica com todo o espaço restante até o canhoto, que não desloca.
 	pdf.SetFont("LiberationSans", "", 7)
-	pdf.SetY(cmToPt(22.68))
+	pdf.SetY(dy(yInfoCompl))
 	xOutInf := nfse.InfNFSe.DPS.InfDPS.Serv.InfoCompl.XOutInf
 	// Se houver texto, plota
 	if xOutInf != "" {
 		pdf.SetX(cmToPt(0.40))
 		// O MultiCell descarta em silêncio o que não couber na altura do Rect;
 		// o corte prévio marca a supressão com reticências (NT 008/2026, item 2.1).
-		pdf.MultiCell(&gopdf.Rect{W: cmToPt(20.00), H: cmToPt(4.00)},
-			limitLines(&pdf, xOutInf, cmToPt(20.00), maxLinhasInfoCompl))
+		altura := cmToPt(yCanhoto-0.05) - dy(yInfoCompl)
+		pdf.MultiCell(&gopdf.Rect{W: cmToPt(20.00), H: altura},
+			limitLines(&pdf, xOutInf, cmToPt(20.00), linhasInfoCompl(desloc)))
 	}
 
 	// ----------------------------------------------------------------------
 	// DATA CIENTIFICAÇÃO E ASSINATURA
 	// ----------------------------------------------------------------------
+	// O canhoto não usa dy(): fica fixo em yCanhoto (28,10) — o DANFSe é de
+	// página única e o pool de linhas dos campos elásticos termina aqui.
 	pdf.Line(cmToPt(0.30), cmToPt(28.10), cmToPt(20.70), cmToPt(28.10))  // Linha superior
 	pdf.Line(cmToPt(0.30), cmToPt(28.77), cmToPt(20.70), cmToPt(28.77))  // Linha inferior
 	pdf.Line(cmToPt(0.30), cmToPt(28.10), cmToPt(0.30), cmToPt(28.77))   // Borda esq

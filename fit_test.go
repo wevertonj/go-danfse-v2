@@ -93,20 +93,20 @@ func TestTruncText(t *testing.T) {
 	t.Run("should keep the original text when it already fits the line budget", func(t *testing.T) {
 		curto := "Inf. Cont.: contrato 4472/2026 | Totais Aproximados dos Tributos: R$ 1.234,56"
 
-		assert.Equal(t, curto, limitLines(pdf, curto, cmToPt(20.00), maxLinhasInfoCompl))
+		assert.Equal(t, curto, limitLines(pdf, curto, cmToPt(20.00), linhasInfoCompl(0)))
 	})
 
 	t.Run("should cut the block text to the lines that fit, ending with an ellipsis", func(t *testing.T) {
 		longo := strings.Repeat("informacao complementar do emitente para conferencia fiscal ", 200)
 
-		got := limitLines(pdf, longo, cmToPt(20.00), maxLinhasInfoCompl)
+		got := limitLines(pdf, longo, cmToPt(20.00), linhasInfoCompl(0))
 
 		assert.True(t, strings.HasSuffix(got, "..."))
 		assert.True(t, strings.HasPrefix(longo, strings.TrimSuffix(got, "...")),
 			"should keep the original text, without re-joining the split lines")
 		linhas, err := pdf.SplitText(got, cmToPt(20.00))
 		require.NoError(t, err)
-		assert.LessOrEqual(t, len(linhas), maxLinhasInfoCompl)
+		assert.LessOrEqual(t, len(linhas), linhasInfoCompl(0))
 	})
 
 	t.Run("should measure with the current font size", func(t *testing.T) {
@@ -119,5 +119,29 @@ func TestTruncText(t *testing.T) {
 
 		assert.Less(t, len(got8), len(got7))
 		assert.LessOrEqual(t, measure(t, pdf8, got8), cmToPt(4.98))
+	})
+}
+
+// TestLinhasInfoCompl cobre a repartição do pool de linhas entre os dois campos
+// elásticos (issue #2, parte 2): a descrição do serviço desloca os blocos para
+// baixo e as informações complementares ficam com o espaço que resta até o
+// canhoto (fixo em 28,10 cm) — nunca menos que as 12 linhas do orçamento da NT
+// para o xOutInf (1.997 chars).
+func TestLinhasInfoCompl(t *testing.T) {
+	t.Run("should use every idle line when the description keeps one line", func(t *testing.T) {
+		// Sem deslocamento o bloco absorve as 6 linhas ociosas do rodapé: as 17
+		// que cabiam nos 4,00 cm do Rect original mais o vão até o canhoto.
+		assert.Equal(t, 23, linhasInfoCompl(0))
+	})
+
+	t.Run("should give back one line per description line", func(t *testing.T) {
+		for extra := 1; extra <= maxLinhasDescServ-1; extra++ {
+			assert.Equal(t, 23-extra, linhasInfoCompl(float64(extra)*passoLinha),
+				"descrição com %d linha(s) extra", extra)
+		}
+	})
+
+	t.Run("should never drop below the NT budget of twelve lines", func(t *testing.T) {
+		assert.Equal(t, minLinhasInfoCompl, linhasInfoCompl(10.0))
 	})
 }

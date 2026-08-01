@@ -21,7 +21,7 @@ Conversão de medidas usada internamente:
 
 ## Seções e Posicionamento Vertical
 
-O grid é **fixo**: toda seção tem Y constante em `danfse_renderer.go`, independente do conteúdo. Nenhum bloco empurra o seguinte.
+O grid é **fixo até a descrição do serviço**: acima de Y = 14,43 toda seção tem Y constante em `danfse_renderer.go`. A descrição do serviço é o único campo elástico de coluna (1 → 8 linhas); cada linha além da primeira desloca em `Δ = (linhas − 1) × passoLinha` tudo entre 14,43 e o canhoto — os Y da tabela abaixo marcados com `+ Δ` são o **grid base** (`dy()` no renderer). O canhoto não desloca.
 
 | Y da divisória (cm) | Y do título (cm) | Seção |
 |---|---|---|
@@ -32,15 +32,15 @@ O grid é **fixo**: toda seção tem Y constante em `danfse_renderer.go`, indepe
 | 6,92 | 6,99 | TOMADOR / ADQUIRENTE |
 | 8,86 | 8,93 | DESTINATÁRIO DA OPERAÇÃO |
 | 10,80 | 10,87 | INTERMEDIÁRIO DA OPERAÇÃO |
-| 12,74 | 12,81 | SERVIÇO PRESTADO |
-| 14,43 | 14,50 | TRIBUTAÇÃO MUNICIPAL (ISSQN) |
-| 17,02 | 17,09 | TRIBUTAÇÃO FEDERAL (EXCETO CBS) |
-| 18,32 | 18,39 | TRIBUTAÇÃO IBS / CBS |
-| 20,90 | 20,97 | VALOR TOTAL DA NFS-E |
-| 22,27 | 22,34 | INFORMAÇÕES COMPLEMENTARES (conteúdo em 22,68) |
-| 28,10 / 28,77 | 28,17 | Canhoto: data de cientificação e assinatura |
+| 12,74 | 12,81 | SERVIÇO PRESTADO (descrição do serviço em 14,16, elástica) |
+| 14,43 + Δ | 14,50 + Δ | TRIBUTAÇÃO MUNICIPAL (ISSQN) |
+| 17,02 + Δ | 17,09 + Δ | TRIBUTAÇÃO FEDERAL (EXCETO CBS) |
+| 18,32 + Δ | 18,39 + Δ | TRIBUTAÇÃO IBS / CBS |
+| 20,90 + Δ | 20,97 + Δ | VALOR TOTAL DA NFS-E |
+| 22,27 + Δ | 22,34 + Δ | INFORMAÇÕES COMPLEMENTARES (conteúdo em 22,68 + Δ) |
+| 28,10 / 28,77 | 28,17 | Canhoto: data de cientificação e assinatura — **fixo**, nunca desloca |
 
-> **Consequência do grid fixo:** a folga entre o valor de um campo e o rótulo seguinte é de ~0,34 cm — não há altura para uma segunda linha. Por isso texto que não cabe é **truncado**, nunca quebrado (ver `## Ajuste de Texto às Colunas`).
+> **Consequência do grid fixo:** a folga entre o valor de um campo e o rótulo seguinte é de ~0,34 cm — não há altura para uma segunda linha em campo de coluna. Por isso texto que não cabe é **truncado**, nunca quebrado (ver `## Ajuste de Texto às Colunas`); as únicas exceções são os dois campos elásticos (`## Campos Elásticos`).
 
 ---
 
@@ -92,13 +92,27 @@ Limites direitos usados por `fitCell` (constantes em `fit.go`):
 
 Campos de bloco (`MultiCell`) usam `limitLines`: o gopdf descarta em silêncio as linhas que não cabem na altura do `Rect`, e o corte prévio marca a supressão com reticências.
 
-| Bloco | `Rect` | Constante | Verificação |
-|---|---|---|---|
-| Informações complementares | 20,00 × 4,00 cm em (0,40; 22,68) | `maxLinhasInfoCompl` = 17 | 17ª linha medida em `yMax` = 26,62 cm, contra o fim do `Rect` em 26,68 cm — a 18ª (~26,86) seria descartada |
-
-Passo medido entre linhas de 7 pt: **0,23–0,24 cm**.
-
 > A referência de 77 caracteres da tabela 2.4.5 pressupõe Microsoft Sans Serif. Em Liberation Sans e caixa alta — como os nomes empresariais chegam no XML — 77 caracteres medem ~11,1 cm e estouram os 10,19 cm do campo; por isso o corte é sempre por largura medida.
+
+---
+
+## Campos Elásticos
+
+Base normativa: NT 008/2026 v1.02, item 2.1 — mais de uma linha é permitido ("desde que a leitura possa ser feita de forma clara") e os tamanhos do 2.4.5 não são obrigatórios. Só dois campos têm orçamento da NT acima de 1 linha; todos os demais truncam em 1 linha via `fitCell`.
+
+| Campo | Orçamento da NT | Linhas | Regra (`fit.go` + `danfse_renderer.go`) |
+|---|---|---|---|
+| Descrição do serviço (`xDescServ`) | 1.297 chars | 1 → `maxLinhasDescServ` = 8 | `SplitText` conta as linhas; acima de 8, `limitLines` corta com `...`; `Δ = (linhas − 1) × passoLinha` desloca tudo entre 14,43 e o canhoto |
+| Informações complementares (`xOutInf`) | 1.997 chars | `linhasInfoCompl(Δ)`: 23 − linhas extras da descrição, nunca < `minLinhasInfoCompl` = 12 | `Rect` de 20,00 cm × (28,10 − 0,05 − (22,68 + Δ)); recebe o saldo do pool quando a descrição encolhe |
+
+| Constante | Valor | Origem |
+|---|---|---|
+| `passoLinha` | 0,2313 cm | avanço de linha do `MultiCell` a 7 pt, medido (17 linhas de `yMin` 22,640 a 26,340) |
+| `yInfoCompl` | 22,68 | Y base do conteúdo das informações complementares |
+| `yCanhoto` | 28,10 | linha superior do canhoto — limite rígido do pool |
+| `folgaInfoCompl` | 0,10 cm | respiro antes do canhoto no cálculo de `linhasInfoCompl` |
+
+Pool de 24 linhas (1 da descrição + 17 históricas + 6 ociosas do rodapé) contra 20 de orçamento da NT (8 + 12): os dois orçamentos cabem simultaneamente, por isso a alocação é gulosa — descrição primeiro, resto para as informações complementares.
 
 ---
 
@@ -149,12 +163,12 @@ As células de título das seções principais recebem fundo cinza aplicado **an
 | DESTINATÁRIO DA OPERAÇÃO | 8,86 | 0,64 | 4,90 |
 | INTERMEDIÁRIO DA OPERAÇÃO | 10,80 | 0,64 | 4,90 |
 | SERVIÇO PRESTADO | 12,74 | 0,64 | 4,90 |
-| TRIBUTAÇÃO MUNICIPAL (ISSQN) | 14,43 | 0,64 | 4,90 |
-| TRIBUTAÇÃO FEDERAL (EXCETO CBS) | 17,02 | 0,64 | 4,90 |
-| TRIBUTAÇÃO IBS / CBS | 18,32 | 0,64 | 4,90 |
-| VALOR TOTAL DA NFS-E | 20,90 | 0,67 | 4,90 |
+| TRIBUTAÇÃO MUNICIPAL (ISSQN) | 14,43 + Δ | 0,64 | 4,90 |
+| TRIBUTAÇÃO FEDERAL (EXCETO CBS) | 17,02 + Δ | 0,64 | 4,90 |
+| TRIBUTAÇÃO IBS / CBS | 18,32 + Δ | 0,64 | 4,90 |
+| VALOR TOTAL DA NFS-E | 20,90 + Δ | 0,67 | 4,90 |
 
-> `INFORMAÇÕES COMPLEMENTARES` é a única seção **sem** fundo cinza — só a divisória em 22,27 cm.
+> `INFORMAÇÕES COMPLEMENTARES` é a única seção **sem** fundo cinza — só a divisória em 22,27 + Δ cm. Os `Rect` de fundo deslocam junto com as divisórias (`dy()` cobre ambos): fundo e linha nunca desalinham.
 
 ---
 
@@ -178,7 +192,7 @@ As células de título das seções principais recebem fundo cinza aplicado **an
 - NT 008/2026 **v1.02** (14/07/2026) — Sefin Nacional: `https://www.gov.br/nfse/pt-br/biblioteca/documentacao-tecnica/rtc/nt-008-se-cgnfse-danfse-20260714-v1-02.pdf`
 - Leiaute XML NFS-e v1.01 — XSD oficial no portal nacional da NFS-e.
 - `danfse_renderer.go` — implementação de referência.
-- `fit.go` — truncamento por largura (`truncText`, `fitCell`, `limitLines`).
+- `fit.go` — truncamento por largura (`truncText`, `fitCell`, `limitLines`) e alocação dos campos elásticos (`linhasInfoCompl`, `passoLinha`, `maxLinhasDescServ`).
 
 ---
 
@@ -202,8 +216,10 @@ As células de título das seções principais recebem fundo cinza aplicado **an
 | `pdf.Cell(nil, ...)` não quebra nem limita texto | valor longo invade a coluna vizinha e a borda | todo dado variável passa por `fitCell` |
 | `MultiCell` descarta linhas excedentes sem sinal | texto termina no meio de uma frase como se fosse o conteúdo | `limitLines` corta antes e acrescenta `...` |
 | `SplitText`/`MultiCell` quebram por largura, **no meio da palavra** | informações complementares saem com `informaca` / `o emitente` em linhas seguidas | comportamento nativo do gopdf; `limitLines` conta caracteres em vez de rejuntar linhas, para não gravar no texto cortes que não existem no original |
-| Grid 100% fixo (Y constante por seção) | um bloco maior **não** empurra o seguinte: ele sobrepõe | nunca acrescentar linha a um campo sem recalcular todo o grid abaixo |
-| Descrição do serviço só comporta **uma** linha (13,79 → 14,43) | a 2ª linha caía sobre o bloco de tributação municipal | uma linha com reticências; não reintroduzir `SplitText` aqui |
+| Grid fixo acima de 14,43 (Y constante por seção) | um bloco maior **não** empurra o seguinte: ele sobrepõe | nunca acrescentar linha a um campo sem passar pelo mecanismo `dy()`/`passoLinha` |
+| Y do trecho ISSQN → informações complementares passam por `dy()` | um `SetY`/`Line`/`Rect` novo com `cmToPt` cru nesse trecho fica para trás quando a descrição cresce e sobrepõe o bloco vizinho | usar `dy()` em todo Y novo entre 14,43 e o canhoto; o detector par-a-par de bbox no teste da descrição elástica acusa o esquecimento |
+| `desloc` calculado com `SplitText` na fonte corrente | contar linhas com outra fonte/tamanho descasa o Δ do texto real | `SetFont` de 7 pt **antes** do `SplitText` da descrição |
+| Canhoto fixo em 28,10 | deslocá-lo quebraria a página única | canhoto fora do `dy()`; `linhasInfoCompl` já respeita o limite |
 | Tamanhos de fonte do item 2.4 da NT são mínimos | encolher a fonte para caber texto é não conformidade | truncar, nunca reduzir |
 | `pdftotext -layout` não revela sobreposição | teste de transbordo passa falsamente | usar `-bbox` e comparar `xMax`/`yMax` |
 | Repo usa Liberation Sans; a NT pede Arial e Microsoft Sans Serif | métricas diferentes das que calibram os limites de caracteres da NT | truncar por `MeasureTextWidth` |

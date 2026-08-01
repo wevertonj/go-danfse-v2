@@ -33,12 +33,46 @@ const (
 	colXEnd = 20.60 // margem interna direita da página
 	colXQR  = 17.48 // início do quadro do QR code, na faixa da chave de acesso
 
-	// maxLinhasInfoCompl é quanto cabe nos 4,00 cm de altura do bloco de
-	// informações complementares, a ~0,232 cm por linha de 7 pt. O MultiCell do
-	// gopdf descarta em silêncio as linhas que não couberem no Rect; cortar aqui
-	// é o que permite marcar a supressão com reticências (NT, item 2.1).
-	maxLinhasInfoCompl = 17
+	// passoLinha é o avanço vertical (cm) de uma linha de MultiCell a 7 pt,
+	// medido no bloco de informações complementares (17 linhas de 22,640 a
+	// 26,340 cm de yMin).
+	passoLinha = 0.2313
+
+	// maxLinhasDescServ acomoda o orçamento da NT para o xDescServ (1.297
+	// chars, tabela 2.4.5) na largura útil da página (~170 chars por linha de
+	// 7 pt). A descrição do serviço é elástica (item 2.1 permite mais de uma
+	// linha) e desloca os blocos seguintes para baixo até este teto.
+	maxLinhasDescServ = 8
+
+	// minLinhasInfoCompl preserva o orçamento da NT para o xOutInf (1.997
+	// chars): mesmo cedendo espaço à descrição, as informações complementares
+	// nunca ficam com menos linhas que isto.
+	minLinhasInfoCompl = 12
+
+	// yInfoCompl e yCanhoto delimitam o bloco de informações complementares no
+	// grid sem deslocamento: conteúdo em 22,68 cm e canhoto fixo em 28,10 cm
+	// (o canhoto nunca desloca — o DANFSe é de página única).
+	yInfoCompl = 22.68
+	yCanhoto   = 28.10
+
+	// folgaInfoCompl é o respiro (cm) entre a última linha possível das
+	// informações complementares e a linha superior do canhoto.
+	folgaInfoCompl = 0.10
 )
+
+// linhasInfoCompl devolve quantas linhas de 7 pt as informações complementares
+// comportam depois de descerem desloc cm (o crescimento da descrição do
+// serviço): o que sobra até o canhoto, nunca menos que o orçamento da NT. O
+// MultiCell do gopdf descarta em silêncio as linhas que não couberem no Rect;
+// cortar por esta conta é o que permite marcar a supressão com reticências
+// (NT, item 2.1).
+func linhasInfoCompl(desloc float64) int {
+	linhas := int((yCanhoto - (yInfoCompl + desloc) - folgaInfoCompl)/passoLinha + 1e-9)
+	if linhas < minLinhasInfoCompl {
+		return minLinhasInfoCompl
+	}
+	return linhas
+}
 
 // truncText devolve text encurtado com reticências até caber em maxW pontos,
 // medido na fonte corrente de pdf. Texto que já cabe volta intacto; quando nem
